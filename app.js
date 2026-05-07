@@ -3,7 +3,7 @@
  * 例: https://rot3d-cha-api.your-subdomain.workers.dev
  * ローカル: http://127.0.0.1:8787
  */
-const API_BASE = "http://127.0.0.1:8787";
+const API_BASE = "https://create3dmodel.mini-mountain1990.workers.dev";
 
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
