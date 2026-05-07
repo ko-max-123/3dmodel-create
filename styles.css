@@ -124,6 +124,58 @@ button:active {
   transform: translateY(1px);
 }
 
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.verify-outcome {
+  margin: 0;
+  padding: 1rem 1.1rem;
+  border-radius: 12px;
+  border-width: 2px;
+  border-style: solid;
+  line-height: 1.5;
+}
+
+.verify-outcome.is-hidden {
+  display: none;
+}
+
+.verify-outcome.correct {
+  background: rgba(46, 160, 67, 0.14);
+  border-color: rgba(62, 185, 99, 0.85);
+  color: #d4f8e0;
+}
+
+.verify-outcome.incorrect {
+  background: rgba(248, 81, 73, 0.12);
+  border-color: rgba(248, 81, 73, 0.7);
+  color: #ffe8e8;
+}
+
+.verify-outcome.expired {
+  background: rgba(210, 153, 34, 0.12);
+  border-color: rgba(242, 204, 96, 0.65);
+  color: #fff4d9;
+}
+
+.verify-outcome-head {
+  display: block;
+  margin: 0 0 0.4rem;
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.verify-outcome-detail {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 400;
+  opacity: 0.95;
+}
+
 .status {
   margin: 0;
   min-height: 1.25rem;

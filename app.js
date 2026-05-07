@@ -3,7 +3,7 @@
  * 例: https://rot3d-cha-api.your-subdomain.workers.dev
  * ローカル: http://127.0.0.1:8787
  */
-const API_BASE = "https://create3dmodel.mini-mountain1990.workers.dev";
+const API_BASE = "http://127.0.0.1:8787";
 
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
@@ -15,6 +15,9 @@ let camera;
 let renderer;
 let controls;
 
+/** 正誤表示を読む時間が取れるように、次問題取得まで少し間を空ける（秒） */
+const VERIFY_OUTCOME_PAUSE_SEC = 2.4;
+
 function setStatus(text, kind = "") {
   const el = document.getElementById("status");
   if (!el) return;
@@ -22,6 +25,42 @@ function setStatus(text, kind = "") {
   el.classList.remove("ok", "err");
   if (kind === "ok") el.classList.add("ok");
   if (kind === "err") el.classList.add("err");
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function clearVerifyOutcome() {
+  const box = document.getElementById("verifyOutcome");
+  if (!box) return;
+  box.classList.add("is-hidden");
+  box.classList.remove("correct", "incorrect", "expired");
+}
+
+/**
+ * @param {'correct' | 'incorrect' | 'expired'} kind
+ */
+function showVerifyOutcome(kind, title, detail) {
+  clearVerifyOutcome();
+  const box = document.getElementById("verifyOutcome");
+  const head = document.getElementById("verifyOutcomeHead");
+  const sub = document.getElementById("verifyOutcomeDetail");
+  if (!box || !head || !sub) return;
+  box.classList.remove("is-hidden");
+  box.classList.add(kind === "correct" ? "correct" : kind === "expired" ? "expired" : "incorrect");
+  head.textContent = title;
+  sub.textContent = detail;
+}
+
+function setSubmitLoading(loading) {
+  const btn = document.getElementById("btnSubmit");
+  const loadBtn = document.getElementById("btnLoad");
+  if (btn) {
+    btn.disabled = loading;
+    btn.setAttribute("aria-busy", loading ? "true" : "false");
+  }
+  if (loadBtn) loadBtn.disabled = loading;
 }
 
 function disposeCurrentCloud() {
@@ -118,6 +157,7 @@ function initThree() {
 }
 
 async function fetchChallenge() {
+  clearVerifyOutcome();
   setStatus("問題を取得しています…");
   const res = await fetch(`${API_BASE}/api/challenge`);
   if (!res.ok) {
@@ -154,39 +194,66 @@ async function submitAnswer() {
     return;
   }
 
-  setStatus("検証中…");
-  const res = await fetch(`${API_BASE}/api/verify`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      challengeId: currentChallengeId,
-      answer,
-    }),
-  });
-
-  let result;
+  setSubmitLoading(true);
+  clearVerifyOutcome();
+  setStatus("サーバへ送って検証しています…");
   try {
-    result = await res.json();
-  } catch {
-    setStatus("応答の解析に失敗しました。", "err");
-    return;
-  }
+    const res = await fetch(`${API_BASE}/api/verify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        challengeId: currentChallengeId,
+        answer,
+      }),
+    });
 
-  if (result.ok) {
-    setStatus("正解です。", "ok");
-    currentChallengeId = null;
-    input.value = "";
+    let result;
+    try {
+      result = await res.json();
+    } catch {
+      showVerifyOutcome(
+        "incorrect",
+        "判定できませんでした",
+        "応答が JSON として読み取れませんでした。通信や API_BASE を確認してください。",
+      );
+      setStatus("", "");
+      return;
+    }
+
+    if (result.ok) {
+      currentChallengeId = null;
+      input.value = "";
+      showVerifyOutcome(
+        "correct",
+        "正解です ✓",
+        "サーバー側で正しいと確認されました。このチャレンジは終了しました。あと「数秒」で自動的に次の問題に切り替わります。",
+      );
+      setStatus("", "");
+      await sleep(VERIFY_OUTCOME_PAUSE_SEC * 1000);
+      await fetchChallenge();
+      return;
+    }
+
+    const reason = result.reason ?? "incorrect";
+    if (reason === "expired") {
+      showVerifyOutcome(
+        "expired",
+        "この問題は無効です",
+        "有効期限切れや、あとでもう一回検証に使われたためです（同じ問題は二度と送れません）。まもなく新しい問題に切り替わります。",
+      );
+    } else {
+      showVerifyOutcome(
+        "incorrect",
+        "不正解です ✕",
+        'サーバーに保存されていた「正しい答え」と一致しませんでした（表示はされません）。同じ入力をやり直すことはできないため、そのまま新しい問題に切り替わります。',
+      );
+    }
+    setStatus("", "");
+    await sleep(VERIFY_OUTCOME_PAUSE_SEC * 1000);
     await fetchChallenge();
-    return;
+  } finally {
+    setSubmitLoading(false);
   }
-
-  const reason = result.reason ?? "incorrect";
-  if (reason === "expired") {
-    setStatus("チャレンジの有効期限切れです。新しい問題を取得します。", "err");
-  } else {
-    setStatus("不正解です。別の問題を取得します。", "err");
-  }
-  await fetchChallenge();
 }
 
 function wireUi() {
@@ -194,7 +261,11 @@ function wireUi() {
     fetchChallenge().catch(() => {});
   });
   document.getElementById("btnSubmit")?.addEventListener("click", () => {
-    submitAnswer().catch(() => setStatus("通信エラー。", "err"));
+    submitAnswer().catch(() => {
+      clearVerifyOutcome();
+      setStatus("通信エラー。ネットワークや API が応答しない可能性があります。", "err");
+      setSubmitLoading(false);
+    });
   });
 }
 
