@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Rot3D-CHA</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <header class="bar">
+      <h1>Rot3D-CHA</h1>
+      <p class="hint">
+        点群の文字（<span class="len" id="answerLength">6</span>文字）を読み取り、英大文字・数字で入力してください（I O Q 0 1 は出ません）。
+      </p>
+    </header>
+    <main class="main">
+      <div id="canvasWrap" class="canvas-wrap"></div>
+      <div class="controls">
+        <label class="field">
+          <span>回答</span>
+          <input
+            id="answerInput"
+            type="text"
+            inputmode="text"
+            autocomplete="off"
+            autocapitalize="characters"
+            maxlength="12"
+            placeholder="例: FHKEG2"
+          />
+        </label>
+        <div class="row">
+          <button type="button" id="btnLoad">問題を取得</button>
+          <button type="button" id="btnSubmit">送信</button>
+        </div>
+        <p id="status" class="status" role="status"></p>
+      </div>
+    </main>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
